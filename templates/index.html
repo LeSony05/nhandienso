@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hệ thống Nhận dạng Chữ số Viết tay AI</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/tailwind.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+    />
+    <style>
+      body {
+        background-color: #f4f6f9;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+      .main-container {
+        max-width: 1200px;
+        margin: 30px auto;
+      }
+      .preview-box {
+        min-height: 250px;
+        border: 2px dashed #cbd5e1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .preview-box img {
+        max-width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+      }
+      .digit-bar-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 4px;
+        font-size: 0.85rem;
+      }
+      .digit-label {
+        width: 50px;
+        font-weight: 600;
+      }
+      .digit-progress {
+        flex-grow: 1;
+        height: 10px;
+        margin: 0 10px;
+        background-color: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .digit-pct {
+        width: 55px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container main-container">
+      <div class="text-center mb-4">
+        <h2 class="text-primary font-weight-bold">
+          HỆ THỐNG NHẬN DẠNG CHỮ SỐ VIẾT TAY
+        </h2>
+        <p class="text-muted">
+          Công nghệ sử dụng: OpenCV xử lý ảnh + Mô hình học sâu MNIST CNN
+          (PyTorch)
+        </p>
+      </div>
+
+      <div class="row">
+        <div class="col-md-5 mb-4">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white font-weight-bold">
+              Tải hình ảnh lên
+            </div>
+            <div class="card-body">
+              <form id="uploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                  <label for="imageInput" class="font-weight-bold"
+                    >Chọn ảnh chứa chữ số cần nhận diện:</label
+                  >
+                  <input
+                    type="file"
+                    class="form-control-file"
+                    id="imageInput"
+                    name="image"
+                    accept="image/*"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  class="btn btn-success btn-block font-weight-bold"
+                  id="btnSubmit"
+                >
+                  Bắt đầu nhận dạng
+                </button>
+              </form>
+
+              <h5 class="mt-4 font-weight-bold text-secondary">
+                Xem trước ảnh gốc:
+              </h5>
+              <div class="preview-box mt-2" id="originPreviewBox">
+                <span class="text-muted" id="uploadPlaceholder"
+                  >Chưa có ảnh nào được tải lên</span
+                >
+                <img id="originImg" src="" style="display: none" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-7 mb-4">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white font-weight-bold">
+              Kết quả phân tích từ AI
+            </div>
+            <div class="card-body">
+              <h5 class="font-weight-bold text-success">
+                Ảnh kết quả khoanh vùng (Bounding Box):
+              </h5>
+              <div class="preview-box mt-2 bg-light" id="resultPreviewBox">
+                <span class="text-muted" id="resultPlaceholder"
+                  >Đang đợi tải ảnh từ bên trái...</span
+                >
+                <img id="annotatedImg" src="" style="display: none" />
+              </div>
+
+              <div
+                class="alert alert-info mt-3 py-2 text-center"
+                style="display: none"
+                id="alertAllNumbers"
+              >
+                <h4 class="margin-0 font-weight-bold" id="txtAllNumbers">
+                  Kết quả: --
+                </h4>
+              </div>
+
+              <div id="probabilitiesContainer" class="mt-4"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const imageInput = document.getElementById("imageInput");
+      const originImg = document.getElementById("originImg");
+      const uploadPlaceholder = document.getElementById("uploadPlaceholder");
+      const uploadForm = document.getElementById("uploadForm");
+      const btnSubmit = document.getElementById("btnSubmit");
+
+      const annotatedImg = document.getElementById("annotatedImg");
+      const resultPlaceholder = document.getElementById("resultPlaceholder");
+      const alertAllNumbers = document.getElementById("alertAllNumbers");
+      const txtAllNumbers = document.getElementById("txtAllNumbers");
+      const probabilitiesContainer = document.getElementById(
+        "probabilitiesContainer",
+      );
+
+      // Hiển thị ảnh gốc khi người dùng chọn file
+      imageInput.addEventListener("change", function () {
+        const file = this.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            originImg.src = e.target.result;
+            originImg.style.display = "block";
+            uploadPlaceholder.style.display = "none";
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // Xử lý gửi Form bằng AJAX đến Backend API
+      uploadForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        btnSubmit.disabled = true;
+        btnSubmit.innerText = "Đang xử lý nhận dạng...";
+
+        // Reset kết quả cũ
+        probabilitiesContainer.innerHTML = "";
+        alertAllNumbers.style.style = "none";
+
+        fetch("/api/recognize", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = "Bắt đầu nhận dạng";
+
+            if (data.success) {
+              // 1. Hiển thị ảnh đã vẽ bounding box
+              annotatedImg.src = data.annotated_image;
+              annotatedImg.style.display = "block";
+              resultPlaceholder.style.display = "none";
+
+              // 2. Hiển thị chuỗi số tổng quát
+              alertAllNumbers.style.display = "block";
+              txtAllNumbers.innerHTML = `Chuỗi chữ số nhận diện: <span class="text-danger font-weight-bold">${data.all_numbers || "Không tìm thấy"}</span>`;
+
+              // 3. VẼ BIỂU ĐỒ TỈ LỆ PHẦN TRĂM CÁC SỐ CÒN LẠI (0-9)
+              let html =
+                '<h5 class="font-weight-bold text-dark mb-3 border-bottom pb-2">Phân tích tỉ lệ chi tiết từng nét chữ:</h5>';
+
+              data.results.forEach((item, itemIdx) => {
+                html += `<div class="card mb-3 bg-white border shadow-sm">
+                                <div class="card-header bg-light font-weight-bold text-secondary py-2">
+                                    Nhóm nhận diện: "${item.text}" (Độ tự tin: ${(item.confidence * 100).toFixed(1)}%)
+                                </div>
+                                <div class="card-body p-3">`;
+
+                // Duyệt qua từng ký tự đơn lẻ trong nhóm số (Hỗ trợ cả số ghép nhiều chữ số)
+                item.probabilities.forEach((charProbs, charIdx) => {
+                  let currentPredictedChar = item.text[charIdx];
+                  html += `<div class="mb-3">
+                                    <p class="mb-2 font-weight-bold text-info">👉 Ký tự vị trí thứ ${charIdx + 1} (AI chọn: <span class="badge badge-success px-2 py-1">${currentPredictedChar}</span>)</p>`;
+
+                  // Lặp qua xác suất của đủ cả 10 chữ số (Từ số 0 đến số 9)
+                  charProbs.forEach((prob, digit) => {
+                    let pct = (prob * 100).toFixed(2);
+                    let isChosen = digit == currentPredictedChar;
+
+                    // Định dạng màu sắc: Màu xanh lá cây cho số trúng tuyển, màu xanh lam cho các số còn lại
+                    let barColor = isChosen ? "bg-success" : "bg-primary";
+                    let textStyle = isChosen
+                      ? "text-success font-weight-bold"
+                      : "text-muted";
+
+                    html += `
+                                <div class="digit-bar-row">
+                                    <span class="digit-label ${textStyle}">Số ${digit}</span>
+                                    <div class="digit-progress">
+                                        <div class="progress-bar ${barColor}" role="progressbar" style="width: ${pct}%"></div>
+                                    </div>
+                                    <span class="digit-pct ${textStyle}">${pct}%</span>
+                                </div>`;
+                  });
+                  html += `</div>`;
+                });
+
+                html += `</div></div>`;
+              });
+
+              probabilitiesContainer.innerHTML = html;
+            } else {
+              alert("Có lỗi từ Server: " + data.error);
+            }
+          })
+          .catch((err) => {
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = "Bắt đầu nhận dạng";
+            alert("Lỗi kết nối API: " + err);
+          });
+      });
+    </script>
+  </body>
+</html>
