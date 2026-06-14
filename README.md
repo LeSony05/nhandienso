@@ -1,6 +1,6 @@
-# 🔢 Nhận Dạng Chữ Số Viết Tay
+# Nhận Dạng Chữ Số Viết Tay
 
-## 🚀 Cách Chạy
+## Cách Chạy
 
 ### 1. Cài đặt thư viện
 
@@ -55,7 +55,7 @@ python3 app.py
    - Danh sách chữ số được nhận dạng
    - Độ tin cậy (xác suất) của từng chữ số
 
-## 📁 Cấu Trúc Project
+## Cấu Trúc Project
 
 ```
 nhandienso/
@@ -85,7 +85,7 @@ nhandienso/
 └── README.md
 ```
 
-## 🧠 Chi Tiết Mô Hình
+## Chi Tiết Mô Hình
 
 ### Kiến Trúc CNN
 
@@ -104,7 +104,7 @@ nhandienso/
 - **Loss Function**: CrossEntropyLoss
 - **Epochs**: 50
 
-## 🔧 Xử Lý Ảnh
+## Xử Lý Ảnh
 
 Quá trình xử lý ảnh để nhận dạng:
 
@@ -116,7 +116,7 @@ Quá trình xử lý ảnh để nhận dạng:
 6. **Chuẩn hóa** → Cắt, resize về 28×28
 7. **Dự đoán** → Chạy qua CNN model
 
-## ⚠️ Gỡ Lỗi
+## Gỡ Lỗi
 
 ### Lỗi "No module named 'flask'"
 
@@ -140,7 +140,7 @@ pip install torch torchvision
 - Kiểm tra file `models/mnist_cnn.pth` tồn tại
 - Huấn luyện lại model: `python3 train_model.py`
 
-## 📊 Huấn Luyện Lại Model
+## Huấn Luyện Lại Model
 
 Nếu muốn huấn luyện model từ đầu:
 
@@ -155,18 +155,18 @@ Script sẽ:
 - Lưu model vào `models/mnist_cnn.pth`
 - Hiển thị biểu đồ training history
 
-## 💡 Lời Khuyên Sử Dụng
+## Lời Khuyên Sử Dụng
 
 - **Ảnh sạch nhất**: Chữ số viết tay rõ ràng trên nền trắng/sáng
 - **Độ sáng**: Tránh ảnh quá tối hoặc quá sáng
 - **Định dạng**: PNG hoặc JPG cho kết quả tốt nhất
 - **Kích thước**: Ảnh quá nhỏ có thể ảnh hưởng độ chính xác
 
-## 📝 License
+## License
 
 Project này được tạo cho mục đích học tập.
 
-## 👤 Tác Giả
+## Tác Giả
 
 **Hoàn chỉnh**: 2024
 
